@@ -29,21 +29,32 @@ def build_m2():
     pipeline = Pipeline([
         ('vect', CountVectorizer()),
         ('tfidf', TfidfTransformer()),
+#        ('tfv', TfidfVectorizer(strip_accents='unicode',
+ #                               use_idf=1,smooth_idf=1,
+  #                             analyzer='word',token_pattern=r'\w{1,}',
+#                                max_features=None)),        
         ('clf', lm.SGDClassifier()),
+        #('logreg',lm.LogisticRegression(penalty='l2', dual=False, tol=0.001,
+        #                         C=1, fit_intercept=True, intercept_scaling=1.0,
+        #                         class_weight=None, random_state=None))
     ])
 
     parameters = {
-        'vect__max_df': (0.5, 0.75, 1.0),
-        #'vect__max_features': (None, 5000, 10000, 50000),
-        'vect__ngram_range': ((1, 1), (1, 2)),  # unigrams or bigrams
-        #'tfidf__use_idf': (True, False),
-        #'tfidf__norm': ('l1', 'l2'),
-        'clf__alpha': (0.00001, 0.000001),
-        'clf__penalty': ('l2', 'elasticnet'),
-        #'clf__n_iter': (10, 50, 80),
+        'vect__max_df': (0.5, 0.75, 1.0), #0.5
+        'vect__max_features': (None, 5000, 10000), #0.5
+        'vect__ngram_range': ((1, 1), (1, 2)),  # unigrams or bigrams 0.5
+        'tfidf__use_idf': (True, False),#True
+        'tfidf__norm': ('l1', 'l2'), #'l1'
+        'clf__alpha': (0.00001, 0.000001), #best 1e-05
+        'clf__penalty': ('l2', 'elasticnet'), #'l2'
+        #'tfv__min_df':(1,2,3),
+        #'tfv__ngram_range': ((1, 1), (1, 2)),
+        #'logreg__penalty':('l1','l2'), #l2 is the best
+        #'logreg__C':(0.1,0.5,1)
+        'clf__n_iter': (10, 50, 80), #best 50
     }
-
-    return pipeline
+    #pipe=build_tfidf_logreg();
+    return pipeline,parameters
 
 
 
