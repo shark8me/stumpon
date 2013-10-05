@@ -23,24 +23,37 @@ probably overfitting the data.
 
 with top 1000 word features: 20 Fold CV Score:  0.997274291149 
 on kaggle leaderboard: ~74%
+roc score for each (knn, nb, logreg,sgd)
+[0.79818693783046513, 0.80984469547359916, 0.8677072588656668, 0.98022321942255941]
 ''' 
-def get_classifiers(xtrain,xtest,y):
-    knn=KNeighborsClassifier(n_neighbors=25)
+def get_classifiers(xtrain,xtest,y,get_prob=False):
+    knn=KNeighborsClassifier(n_neighbors=25,n_jobs=-1)
     nb=BernoulliNB(alpha=0.1)
     svc=SVC(C=1,kernel='linear')
     logreg=lm.LogisticRegression(penalty='l2', dual=False, tol=0.001,
                                  C=1, fit_intercept=True, intercept_scaling=1.0,
                                  class_weight=None, random_state=None)
-    sgd=lm.SGDClassifier(alpha=1e-05,penalty='l2',n_iter=50,loss='log')
-    cls=[knn,nb,logreg,sgd]
+    sgd=lm.SGDClassifier(alpha=1e-05,penalty='l2',n_iter=50,loss='log',
+                         n_jobs=-1
+                         )
+    cls=[knn,nb,svc,logreg,sgd]
+    #cls=[sgd]
     trainpred=[]
     testpred=[]
     for i in cls:
         print " fitting classifier "
+        #scores = cross_validation.cross_val_score(i, xtrain, y,
+        #                                          scoring='roc_auc')
         i.fit(xtrain,y)
-        print " predicting with classifier "
-        trainpred.append(i.predict_proba(xtrain)[:,1])
-        testpred.append(i.predict_proba(xtest)[:,1])
+        #print " predicting with classifier ",scores
+        if(get_prob):
+            trainpred.append(i.predict_proba(xtrain)[:,1])
+            testpred.append(i.predict_proba(xtest)[:,1])
+        else:
+            pr=i.predict(xtrain)
+            trainpred.append(pr)            
+            testpred.append(i.predict(xtest))
+        print " roc score ",metrics.classification_report(y,pr)
     return trainpred,testpred
 
 def get_lowdim_vec(X_all):
@@ -81,5 +94,19 @@ def writefile(pred):
     pred_df = p.DataFrame(pred, index=testfile.index, columns=['label'])
     pred_df.to_csv('benchmark.csv')
 
-x=get_predfile()
+''' local auc score: 0.886325480881  
+on kaggle: 0.80126    '''
+def get_majority_vote():
+    tfv=tfidf_logreg.gettfv()
+    X,y,X_all,X_test=runmodel.loaddata()
+    tfv.fit(X_all)
+    trainwordfeats=tfv.transform(X)
+    testwordfeats=tfv.transform(X_test)
+    tp,ttp=get_classifiers(trainwordfeats,testwordfeats,y)
+    trainarr=np.vstack((tp[0],tp[1],tp[2],tp[3],tp[4])).transpose()
+    testarr=np.vstack((ttp[0],ttp[1],ttp[2],ttp[3],ttp[4])).transpose()
+    print " roc score ",metrics.roc_auc_score(y,(np.sum(trainarr,axis=1)>3).astype(int))
+    return (np.sum(testarr,axis=1)>3).astype(int)
+
+x=get_majority_vote()
 writefile(x)
