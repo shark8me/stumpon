@@ -125,6 +125,15 @@ using only words where len>3:
 num feats  164859
 with redcn, and stemmer, with lemmatization off: 20 Fold CV Score:  0.878574145464
 num feats  213159
+
+with non-lemmatized 20 Fold CV Score:  0.877776526482
+num feats  209420
+
+
+final score:
+20 Fold CV Score:  0.878574145464
+num feats  213159
+ Your submission scored 0.87819 (on kaggle), lower than benchmark
 '''
 def v3():
     stop_words=['www','html','title','url','body','if']
@@ -146,8 +155,16 @@ def runpipeline(tfv):
     print "transforming data"
     X_all = tfv.transform(X_all)    
     X = X_all[:lentrain]
-    X_test = X_all[lentrain:]    
-    print "20 Fold CV Score: ", np.mean(cross_validation.cross_val_score(getdefclf(), X, y, cv=20, scoring='roc_auc'))
+    X_test = X_all[lentrain:] 
+    clf= getdefclf()
+    print "20 Fold CV Score: ", np.mean(cross_validation.cross_val_score(clf, X, y, cv=20, scoring='roc_auc'))
+    print "training on full data"
+    clf.fit(X,y)
+    pred = clf.predict_proba(X_test)[:,1]
+    testfile = p.read_csv(datadir+'test.tsv', sep="\t", na_values=['?'], index_col=1)
+    pred_df = p.DataFrame(pred, index=testfile.index, columns=['label'])
+    pred_df.to_csv('benchmark.csv')
+    print "submission file created.."
     return tfv
 
 tfv=runpipeline(v3())
